@@ -6,16 +6,10 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
+#include <pthread.h>
 
 /* Map POSIX types to Windows types */
 typedef int socklen_t;
-
-/* Pthread compatibility for Windows */
-typedef CRITICAL_SECTION pthread_mutex_t;
-#define pthread_mutex_init(m, attr) InitializeCriticalSection(m)
-#define pthread_mutex_lock(m) EnterCriticalSection(m)
-#define pthread_mutex_unlock(m) LeaveCriticalSection(m)
-#define pthread_mutex_destroy(m) DeleteCriticalSection(m)
 
 /* Map POSIX functions to Windows equivalents */
 static inline int close_socket(SOCKET s) { return closesocket(s); }
