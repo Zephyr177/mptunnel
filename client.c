@@ -63,9 +63,11 @@ void* ev_thread(void* ptr) {
 
 
 int main(int argc, char** argv) {
+#ifndef NO_GETTEXT
     setlocale(LC_ALL, "");
     bindtextdomain("mptunnel", "locale");
     textdomain("mptunnel");
+#endif
     
     if (argc <= 1) {
         fprintf(stderr, _("Usage: <%s> <config_file>\n"), argv[0]);

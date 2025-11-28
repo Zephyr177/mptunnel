@@ -10,15 +10,16 @@
 
 #include <ev.h>
 
-
+#ifndef NO_GETTEXT
 #include <locale.h>
 #include <libintl.h>
+#define _(STR) gettext(STR)
+#else
+#define _(STR) (STR)
+#endif
 
 #include "linklist.h"
 #include "rbtree.h"
-
-
-#define _(STR) gettext(STR)
 
 /// 转发时最大的包长度
 #define MAX_PACKET_SIZE 8000

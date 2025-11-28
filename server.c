@@ -352,9 +352,11 @@ void* server_thread(void* ptr) {
 int main(int argc, char** argv) {
     int clientfd, listenfd;
     
+#ifndef NO_GETTEXT
     setlocale(LC_ALL, "");
     bindtextdomain("mptunnel", "locale");
     textdomain("mptunnel");
+#endif
     
     if (argc <= 3) {
         fprintf(stderr, _("Usage: <%s> <listen_port> <target_ip> <target_port>\n"), argv[0]);

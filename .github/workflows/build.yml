@@ -30,12 +30,24 @@ jobs:
           sudo apt-get install -y gcc-aarch64-linux-gnu
         fi
     
+    - name: Build libev for ARM64 (static)
+      if: matrix.arch == 'arm64'
+      run: |
+        wget https://dist.schmorp.de/libev/libev-4.33.tar.gz
+        tar -xzf libev-4.33.tar.gz
+        cd libev-4.33
+        export CC=aarch64-linux-gnu-gcc
+        ./configure --host=aarch64-linux-gnu --prefix=$PWD/../libev-install --enable-static --disable-shared
+        make
+        make install
+        cd ..
+    
     - name: Build
       run: |
         if [ "${{ matrix.arch }}" = "arm64" ]; then
           export CC=aarch64-linux-gnu-gcc
-          export CFLAGS="-g -Wall -O2"
-          export LDFLAGS="-g -pthread -O2 -static"
+          export CFLAGS="-g -Wall -O2 -I$PWD/libev-install/include"
+          export LDFLAGS="-g -pthread -O2 -L$PWD/libev-install/lib -lev -static"
         else
           export CC=gcc
           export CFLAGS="-g -Wall -O2"
@@ -90,7 +102,7 @@ jobs:
         export AR=$TOOLCHAIN/bin/llvm-ar
         export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
         
-        ./configure --host=aarch64-linux-android --prefix=$PWD/../libev-install
+        ./configure --host=aarch64-linux-android --prefix=$PWD/../libev-install --enable-static --disable-shared
         make
         make install
         cd ..
@@ -99,7 +111,7 @@ jobs:
       run: |
         export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
         export CC=$TOOLCHAIN/bin/aarch64-linux-android21-clang
-        export CFLAGS="-g -Wall -O2 -I$PWD/libev-install/include"
+        export CFLAGS="-g -Wall -O2 -I$PWD/libev-install/include -DNO_GETTEXT"
         export LDFLAGS="-g -pthread -O2 -L$PWD/libev-install/lib -lev -static"
         
         # Build object files
@@ -141,15 +153,25 @@ jobs:
         update: true
         install: >-
           mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-libev
           make
+    
+    - name: Build libev for Windows
+      shell: msys2 {0}
+      run: |
+        wget https://dist.schmorp.de/libev/libev-4.33.tar.gz
+        tar -xzf libev-4.33.tar.gz
+        cd libev-4.33
+        ./configure --prefix=$PWD/../libev-install --enable-static --disable-shared
+        make
+        make install
+        cd ..
     
     - name: Build
       shell: msys2 {0}
       run: |
         export CC=gcc
-        export CFLAGS="-g -Wall -O2"
-        export LDFLAGS="-g -lev -lws2_32 -pthread -O2"
+        export CFLAGS="-g -Wall -O2 -I$PWD/libev-install/include"
+        export LDFLAGS="-g -L$PWD/libev-install/lib -lev -lws2_32 -pthread -O2 -static"
         
         # Build object files
         $CC $CFLAGS -c client.c -o client.o
