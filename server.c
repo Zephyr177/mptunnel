@@ -2,15 +2,9 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <pthread.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <ev.h>
+#include "platform.h"
 #include "net.h"
 
 #include "linklist.h"
@@ -352,6 +346,12 @@ void* server_thread(void* ptr) {
 int main(int argc, char** argv) {
     int clientfd, listenfd;
     
+    // Initialize platform-specific networking
+    if (platform_init() != 0) {
+        fprintf(stderr, "Failed to initialize network subsystem\n");
+        exit(-1);
+    }
+
 #ifndef NO_GETTEXT
     setlocale(LC_ALL, "");
     bindtextdomain("mptunnel", "locale");

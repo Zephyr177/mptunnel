@@ -2,13 +2,10 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <pthread.h>
-#include <unistd.h>
 #include <assert.h>
 #include <ev.h>
+#include "platform.h"
 #include "net.h"
 
 #include "linklist.h"
@@ -63,6 +60,12 @@ void* ev_thread(void* ptr) {
 
 
 int main(int argc, char** argv) {
+    // Initialize platform-specific networking
+    if (platform_init() != 0) {
+        fprintf(stderr, "Failed to initialize network subsystem\n");
+        exit(-1);
+    }
+
 #ifndef NO_GETTEXT
     setlocale(LC_ALL, "");
     bindtextdomain("mptunnel", "locale");
