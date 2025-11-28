@@ -12,8 +12,7 @@
 typedef int socklen_t;
 
 /* Map POSIX functions to Windows equivalents */
-static inline int close_socket(SOCKET s) { return closesocket(s); }
-#define close(s) close_socket(s)
+#define close(s) closesocket((SOCKET)(s))
 #define ioctl(s, cmd, arg) ioctlsocket(s, cmd, (u_long*)(arg))
 #define sleep(s) Sleep((s) * 1000)
 
