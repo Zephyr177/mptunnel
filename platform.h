@@ -13,6 +13,12 @@ typedef int socklen_t;
 /* Map POSIX functions to Windows equivalents */
 #define close(s) closesocket(s)
 #define ioctl(s, cmd, arg) ioctlsocket(s, cmd, (u_long*)(arg))
+#define sleep(s) Sleep((s) * 1000)
+
+/* Windows doesn't have MSG_DONTWAIT, use 0 instead (non-blocking is set via ioctlsocket) */
+#ifndef MSG_DONTWAIT
+#define MSG_DONTWAIT 0
+#endif
 
 /* Windows doesn't have these error codes in errno.h */
 #ifndef EWOULDBLOCK
