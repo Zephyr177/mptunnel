@@ -57,7 +57,7 @@ int packet_send(int fd, char* buf, int buflen, int id) {
     packet_t* p = packet_make(PKT_TYPE_DATA, buf, buflen, id);
 
     errno = 0;
-    sendb = send(fd, p, sizeof(*p) + buflen, MSG_DONTWAIT);
+    sendb = send(fd, (const char *)p, sizeof(*p) + buflen, MSG_DONTWAIT);
     if (sendb < 0) {
         LOGW(_("Could not send data to %d with %lu bytes: %s\n"), fd, sizeof(*p) + buflen, strerror(errno));
     }
