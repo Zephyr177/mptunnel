@@ -10,8 +10,16 @@
 /* Map POSIX types to Windows types */
 typedef int socklen_t;
 
+/* Pthread compatibility for Windows */
+typedef CRITICAL_SECTION pthread_mutex_t;
+#define pthread_mutex_init(m, attr) InitializeCriticalSection(m)
+#define pthread_mutex_lock(m) EnterCriticalSection(m)
+#define pthread_mutex_unlock(m) LeaveCriticalSection(m)
+#define pthread_mutex_destroy(m) DeleteCriticalSection(m)
+
 /* Map POSIX functions to Windows equivalents */
-#define close(s) closesocket(s)
+static inline int close_socket(SOCKET s) { return closesocket(s); }
+#define close(s) close_socket(s)
 #define ioctl(s, cmd, arg) ioctlsocket(s, cmd, (u_long*)(arg))
 #define sleep(s) Sleep((s) * 1000)
 
@@ -51,6 +59,7 @@ static inline void platform_cleanup(void) {
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <pthread.h>
 
 static inline int platform_init(void) {
     return 0;
