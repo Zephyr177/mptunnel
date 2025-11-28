@@ -49,7 +49,7 @@
     if (tmp == NULL) {  \
         strncpy(timestr, "unknow", sizeof(timestr) - 1);   \
     } else {    \
-        strftime(timestr, sizeof(timestr), "%F %H:%M:%S.", tmp);  \
+        strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S.", tmp);  \
         sprintf(ms, "%03d", (int)tv.tv_usec / 1000);   \
         strncat(timestr, ms, sizeof(timestr) - strlen(timestr) - 1); \
     } \
