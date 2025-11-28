@@ -11,10 +11,14 @@
 /* Map POSIX types to Windows types */
 typedef int socklen_t;
 
-/* Map POSIX functions to Windows equivalents */
-#define close(s) closesocket((SOCKET)(s))
-#define ioctl(s, cmd, arg) ioctlsocket(s, cmd, (u_long*)(arg))
-#define sleep(s) Sleep((s) * 1000)
+/* Map POSIX functions to Windows equivalents - use inline functions to avoid macro issues */
+static inline int platform_close(int s) { return closesocket((SOCKET)s); }
+static inline int platform_ioctl(int s, long cmd, u_long *arg) { return ioctlsocket((SOCKET)s, cmd, arg); }
+static inline void platform_sleep(unsigned int seconds) { Sleep(seconds * 1000); }
+
+#define close platform_close
+#define ioctl(s, cmd, arg) platform_ioctl(s, cmd, (u_long*)(arg))
+#define sleep platform_sleep
 
 /* Windows doesn't have MSG_DONTWAIT, use 0 instead (non-blocking is set via ioctlsocket) */
 #ifndef MSG_DONTWAIT
