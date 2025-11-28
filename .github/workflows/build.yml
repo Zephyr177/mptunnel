@@ -1,0 +1,198 @@
+name: Build MultiPlatform
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  release:
+    types: [ created ]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            cc: gcc
+          - arch: arm64
+            cc: aarch64-linux-gnu-gcc
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libev-dev
+        if [ "${{ matrix.arch }}" = "arm64" ]; then
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+        fi
+    
+    - name: Build
+      run: |
+        if [ "${{ matrix.arch }}" = "arm64" ]; then
+          export CC=aarch64-linux-gnu-gcc
+          export CFLAGS="-g -Wall -O2"
+          export LDFLAGS="-g -pthread -O2 -static"
+        else
+          export CC=gcc
+          export CFLAGS="-g -Wall -O2"
+          export LDFLAGS="-g -lev -pthread -O2"
+        fi
+        
+        # Build object files
+        $CC $CFLAGS -c client.c -o client.o
+        $CC $CFLAGS -c net.c -o net.o
+        $CC $CFLAGS -c mptunnel.c -o mptunnel.o
+        $CC $CFLAGS -c rbtree.c -o rbtree.o
+        $CC $CFLAGS -c server.c -o server.o
+        
+        # Build mpclient
+        $CC client.o net.o mptunnel.o rbtree.o -o mpclient $LDFLAGS
+        
+        # Build mpserver
+        $CC server.o mptunnel.o net.o rbtree.o -o mpserver $LDFLAGS
+    
+    - name: Package artifacts
+      run: |
+        mkdir -p dist
+        cp mpclient dist/mpclient-linux-${{ matrix.arch }}
+        cp mpserver dist/mpserver-linux-${{ matrix.arch }}
+        chmod +x dist/*
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: mptunnel-linux-${{ matrix.arch }}
+        path: dist/*
+
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Android NDK
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r25c
+    
+    - name: Build libev for Android
+      run: |
+        wget https://dist.schmorp.de/libev/libev-4.33.tar.gz
+        tar -xzf libev-4.33.tar.gz
+        cd libev-4.33
+        
+        export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+        export CC=$TOOLCHAIN/bin/aarch64-linux-android21-clang
+        export AR=$TOOLCHAIN/bin/llvm-ar
+        export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
+        
+        ./configure --host=aarch64-linux-android --prefix=$PWD/../libev-install
+        make
+        make install
+        cd ..
+    
+    - name: Build for Android ARM64
+      run: |
+        export TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+        export CC=$TOOLCHAIN/bin/aarch64-linux-android21-clang
+        export CFLAGS="-g -Wall -O2 -I$PWD/libev-install/include"
+        export LDFLAGS="-g -pthread -O2 -L$PWD/libev-install/lib -lev -static"
+        
+        # Build object files
+        $CC $CFLAGS -c client.c -o client.o
+        $CC $CFLAGS -c net.c -o net.o
+        $CC $CFLAGS -c mptunnel.c -o mptunnel.o
+        $CC $CFLAGS -c rbtree.c -o rbtree.o
+        $CC $CFLAGS -c server.c -o server.o
+        
+        # Build mpclient
+        $CC client.o net.o mptunnel.o rbtree.o -o mpclient $LDFLAGS
+        
+        # Build mpserver
+        $CC server.o mptunnel.o net.o rbtree.o -o mpserver $LDFLAGS
+    
+    - name: Package artifacts
+      run: |
+        mkdir -p dist
+        cp mpclient dist/mpclient-android-arm64
+        cp mpserver dist/mpserver-android-arm64
+        chmod +x dist/*
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: mptunnel-android-arm64
+        path: dist/*
+
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-libev
+          make
+    
+    - name: Build
+      shell: msys2 {0}
+      run: |
+        export CC=gcc
+        export CFLAGS="-g -Wall -O2"
+        export LDFLAGS="-g -lev -lws2_32 -pthread -O2"
+        
+        # Build object files
+        $CC $CFLAGS -c client.c -o client.o
+        $CC $CFLAGS -c net.c -o net.o
+        $CC $CFLAGS -c mptunnel.c -o mptunnel.o
+        $CC $CFLAGS -c rbtree.c -o rbtree.o
+        $CC $CFLAGS -c server.c -o server.o
+        
+        # Build mpclient
+        $CC client.o net.o mptunnel.o rbtree.o -o mpclient.exe $LDFLAGS
+        
+        # Build mpserver
+        $CC server.o mptunnel.o net.o rbtree.o -o mpserver.exe $LDFLAGS
+    
+    - name: Package artifacts
+      shell: msys2 {0}
+      run: |
+        mkdir -p dist
+        cp mpclient.exe dist/mpclient-windows-x64.exe
+        cp mpserver.exe dist/mpserver-windows-x64.exe
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: mptunnel-windows-x64
+        path: dist/*
+
+  release:
+    needs: [build-linux, build-android, build-windows]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+    
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          mptunnel-linux-amd64/*
+          mptunnel-linux-arm64/*
+          mptunnel-android-arm64/*
+          mptunnel-windows-x64/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
